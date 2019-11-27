@@ -4,6 +4,8 @@ import glslify from 'glslify';
 import Tweakpane from 'tweakpane';
 import fullScreenTriFrag from '../../shaders/fullScreenTri.frag';
 import fullScreenTriVert from '../../shaders/fullScreenTri.vert';
+import testShaderFrag from '../../shaders/testShader.frag';
+import testShaderVert from '../../shaders/testShader.vert';
 import OrbitControls from 'three-orbitcontrols';
 import TweenMax from 'TweenMax';
 
@@ -20,7 +22,7 @@ export default class WebGLView {
 	constructor(app) {
 		this.app = app;
 		this.PARAMS = {
-			rotSpeed: 0.05
+			rotSpeed: 0.001
 		};
 
 		this.init();
@@ -30,11 +32,25 @@ export default class WebGLView {
 	async init() {
 		this.initThree();
 		this.initBgScene();
-		this.initObject();
 		this.initLights();
 		this.initTweakPane();
-		await this.loadTextMesh();
+		await this.loadMesh();
+		this.setupMaterial();
+		this.createMultipleSpheres();
 		this.initRenderTri();
+		this.setupMouseListener();
+	}
+
+	setupMouseListener() {
+		this.mouse = new THREE.Vector2();
+		this.width = window.innerWidth;
+		this.height = window.innerHeight;
+
+		document.addEventListener('mousemove', ({ clientX, clientY }) => {
+			this.mouse.x = (clientX / this.width) * 2 - 1;
+			this.mouse.y = -(clientY / this.height) * 2 + 1;
+
+		})
 	}
 
 	initTweakPane() {
@@ -50,6 +66,24 @@ export default class WebGLView {
 			});
 	}
 
+	createMultipleSpheres() {
+		this.spheres = [];
+		this.numSpheres = 5;
+		let scaleStep = 1.0;
+
+		for (let i = 0; i < this.numSpheres; i++) {
+			let clone = this.testMesh.clone();
+
+			this.bgScene.add(clone);
+
+			clone.scale.set(i * scaleStep, i * scaleStep, i * scaleStep);
+
+			this.spheres.push(clone);
+		}
+
+		console.log(this.spheres);
+	}
+
 	initThree() {
 		this.scene = new THREE.Scene();
 
@@ -61,20 +95,46 @@ export default class WebGLView {
 		this.clock = new THREE.Clock();
 	}
 
-	loadTextMesh() {
+	loadMesh() {
 		return new Promise((res, rej) => {
 			let loader = new GLTFLoader();
 
-			loader.load('./bbali.glb', object => {
+			loader.load('./sphere-layers.glb', object => {
 				object;
-				this.textMesh = object.scene.children[0];
-				console.log(this.textMesh);
-				this.textMesh.add(new THREE.AxesHelper());
-				this.bgScene.add(this.textMesh);
+				this.testMesh = object.scene.children[0];
+				console.log(this.testMesh);
+				// this.textMesh.add(new THREE.AxesHelper());
+				// this.bgScene.add(this.testMesh);
 
 				res();
 			});
 		});
+	}
+
+	setupMaterial() {
+		let material = new THREE.ShaderMaterial({
+			fragmentShader: glslify(testShaderFrag),
+			vertexShader: glslify(testShaderVert),
+			uniforms: {
+				u_time: {
+					value: 0.0
+				},
+				u_texture: {
+					value: new THREE.TextureLoader().load('./all-color.png', (texture) => {
+						texture.flipY = false;
+						texture.needsUpdate = true;
+					})
+				},
+				uMouse: {
+					value: 0.0
+				}
+			}
+		});
+
+		this.testMesh.material = this.testMeshMaterial = material;
+
+		this.testMesh.material.needsUpdate = true;
+
 	}
 
 	returnRenderTriGeometry() {
@@ -142,30 +202,16 @@ export default class WebGLView {
 		);
 		this.controls = new OrbitControls(this.bgCamera, this.renderer.domElement);
 
-		this.bgCamera.position.z = 3;
+		this.bgCamera.position.z = 6;
 		this.controls.update();
 
 		this.bgScene = new THREE.Scene();
 	}
 
 	initLights() {
-		this.pointLight = new THREE.PointLight(0xff0000, 1, 100);
-		this.pointLight.position.set(0, 0, 50);
-		this.bgScene.add(this.pointLight);
-	}
-
-	initObject() {
-		let geo = new THREE.TetrahedronBufferGeometry(10, 0);
-		let mat = new THREE.MeshPhysicalMaterial({
-			roughness: 0.5,
-			metalness: 0.3,
-			reflectivity: 1,
-			clearcoat: 1
-		});
-		this.tetra = new THREE.Mesh(geo, mat);
-		console.log('tetra:  ', this.tetra);
-
-		// this.bgScene.add(this.tetra);
+		// this.pointLight = new THREE.PointLight(0xff0000, 1, 100);
+		// this.pointLight.position.set(0, 0, 50);
+		// this.bgScene.add(this.pointLight);
 	}
 
 	resize() {
@@ -184,12 +230,14 @@ export default class WebGLView {
 		if (this.trackball) this.trackball.handleResize();
 	}
 
-	updateTetra() {
-		this.tetra.rotation.y += this.PARAMS.rotSpeed;
+	updateTestMesh() {
+		this.testMesh.rotation.y += this.PARAMS.rotSpeed;
 	}
 
-	updateTextMesh() {
-		this.textMesh.rotation.y += this.PARAMS.rotSpeed;
+	updateSpheres() {
+		for (let i = 0; i < this.numSpheres; i++) {
+			this.spheres[i].rotation.y += i % 2 ? 0.001 : -0.001;
+		}
 	}
 
 	update() {
@@ -202,12 +250,17 @@ export default class WebGLView {
 			this.triMaterial.uniforms.uTime.value = time;
 		}
 
-		if (this.tetra) {
-			this.updateTetra();
+		if (this.testMeshMaterial) {
+			this.testMeshMaterial.uniforms.u_time.value = time;
+			this.testMeshMaterial.uniforms.uMouse.value = this.mouse;
 		}
 
-		if (this.textMesh) {
-			this.updateTextMesh();
+		if (this.testMesh) {
+			this.updateTestMesh();
+		}
+
+		if (this.spheres !== 0) {
+			this.updateSpheres();
 		}
 
 		if (this.trackball) this.trackball.update();
