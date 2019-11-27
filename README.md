@@ -1,1 +1,1 @@
-boilerplate forked from https://github.com/brunoimbrizi/webpack-threejs
+blender + threejs + glsl
