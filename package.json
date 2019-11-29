@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@brunoimbrizi/controlkit": "^0.1.99",
+    "@johh/three-effectcomposer": "0.0.7",
     "async-preloader": "^4.8.1",
     "domready": "^1.0.8",
     "glsl-inverse": "^1.0.0",

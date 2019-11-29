@@ -1,60 +1,60 @@
 import WebGLView from './webgl/WebGLView';
 
 export default class App {
+  constructor() {}
 
-	constructor() {
+  init() {
+    this.initWebGL();
+    this.addListeners();
+    this.animate();
+    this.resize();
+  }
 
-	}
+  initWebGL() {
+    this.webgl = new WebGLView(this);
+    document
+      .querySelector('.container')
+      .appendChild(this.webgl.renderer.domElement);
+  }
 
-	init() {
-		this.initWebGL();
-		this.addListeners();
-		this.animate();
-		this.resize();
-	}
+  addListeners() {
+    this.handlerAnimate = this.animate.bind(this);
 
-	initWebGL() {
-		this.webgl = new WebGLView(this);
-		document.querySelector('.container').appendChild(this.webgl.renderer.domElement);
-	}
+    window.addEventListener('resize', this.resize.bind(this));
+    window.addEventListener('keyup', this.keyup.bind(this));
+  }
 
-	addListeners() {
-		this.handlerAnimate = this.animate.bind(this);
+  animate(now) {
+    this.update();
+    this.draw();
 
-		window.addEventListener('resize', this.resize.bind(this));
-		window.addEventListener('keyup', this.keyup.bind(this));
-	}
+    this.raf = requestAnimationFrame(this.handlerAnimate);
+  }
 
-	animate() {
-		this.update();
-		this.draw();
+  // ---------------------------------------------------------------------------------------------
+  // PUBLIC
+  // ---------------------------------------------------------------------------------------------
 
-		this.raf = requestAnimationFrame(this.handlerAnimate);
-	}
+  update() {
+    if (this.webgl) this.webgl.update();
+  }
 
-	// ---------------------------------------------------------------------------------------------
-	// PUBLIC
-	// ---------------------------------------------------------------------------------------------
+  draw() {
+    if (this.webgl) this.webgl.draw();
+  }
 
-	update() {
-		if (this.webgl) this.webgl.update();
-	}
+  // ---------------------------------------------------------------------------------------------
+  // EVENT HANDLERS
+  // ---------------------------------------------------------------------------------------------
 
-	draw() {
-		if (this.webgl) this.webgl.draw();
-	}
+  resize() {
+    if (this.webgl) this.webgl.resize();
+  }
 
-	// ---------------------------------------------------------------------------------------------
-	// EVENT HANDLERS
-	// ---------------------------------------------------------------------------------------------
-
-	resize() {
-		if (this.webgl) this.webgl.resize();
-	}
-
-	keyup(e) {
-
-		// r
-		if (e.keyCode == 82) { if (this.webgl.trackball) this.webgl.trackball.reset(); }
-	}
+  keyup(e) {
+    // r
+    if (e.keyCode == 82) {
+      if (this.webgl.trackball) this.webgl.trackball.reset();
+    }
+  }
 }
